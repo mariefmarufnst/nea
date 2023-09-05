@@ -1,0 +1,941 @@
+<html>
+    <head>
+        <meta charset="utf-8">
+        
+            <script>function neighbourhoodHighlight(params) {
+  // console.log("in nieghbourhoodhighlight");
+  allNodes = nodes.get({ returnType: "Object" });
+  // originalNodes = JSON.parse(JSON.stringify(allNodes));
+  // if something is selected:
+  if (params.nodes.length > 0) {
+    highlightActive = true;
+    var i, j;
+    var selectedNode = params.nodes[0];
+    var degrees = 2;
+
+    // mark all nodes as hard to read.
+    for (let nodeId in allNodes) {
+      // nodeColors[nodeId] = allNodes[nodeId].color;
+      allNodes[nodeId].color = "rgba(200,200,200,0.5)";
+      if (allNodes[nodeId].hiddenLabel === undefined) {
+        allNodes[nodeId].hiddenLabel = allNodes[nodeId].label;
+        allNodes[nodeId].label = undefined;
+      }
+    }
+    var connectedNodes = network.getConnectedNodes(selectedNode);
+    var allConnectedNodes = [];
+
+    // get the second degree nodes
+    for (i = 1; i < degrees; i++) {
+      for (j = 0; j < connectedNodes.length; j++) {
+        allConnectedNodes = allConnectedNodes.concat(
+          network.getConnectedNodes(connectedNodes[j])
+        );
+      }
+    }
+
+    // all second degree nodes get a different color and their label back
+    for (i = 0; i < allConnectedNodes.length; i++) {
+      // allNodes[allConnectedNodes[i]].color = "pink";
+      allNodes[allConnectedNodes[i]].color = "rgba(150,150,150,0.75)";
+      if (allNodes[allConnectedNodes[i]].hiddenLabel !== undefined) {
+        allNodes[allConnectedNodes[i]].label =
+          allNodes[allConnectedNodes[i]].hiddenLabel;
+        allNodes[allConnectedNodes[i]].hiddenLabel = undefined;
+      }
+    }
+
+    // all first degree nodes get their own color and their label back
+    for (i = 0; i < connectedNodes.length; i++) {
+      // allNodes[connectedNodes[i]].color = undefined;
+      allNodes[connectedNodes[i]].color = nodeColors[connectedNodes[i]];
+      if (allNodes[connectedNodes[i]].hiddenLabel !== undefined) {
+        allNodes[connectedNodes[i]].label =
+          allNodes[connectedNodes[i]].hiddenLabel;
+        allNodes[connectedNodes[i]].hiddenLabel = undefined;
+      }
+    }
+
+    // the main node gets its own color and its label back.
+    // allNodes[selectedNode].color = undefined;
+    allNodes[selectedNode].color = nodeColors[selectedNode];
+    if (allNodes[selectedNode].hiddenLabel !== undefined) {
+      allNodes[selectedNode].label = allNodes[selectedNode].hiddenLabel;
+      allNodes[selectedNode].hiddenLabel = undefined;
+    }
+  } else if (highlightActive === true) {
+    // console.log("highlightActive was true");
+    // reset all nodes
+    for (let nodeId in allNodes) {
+      // allNodes[nodeId].color = "purple";
+      allNodes[nodeId].color = nodeColors[nodeId];
+      // delete allNodes[nodeId].color;
+      if (allNodes[nodeId].hiddenLabel !== undefined) {
+        allNodes[nodeId].label = allNodes[nodeId].hiddenLabel;
+        allNodes[nodeId].hiddenLabel = undefined;
+      }
+    }
+    highlightActive = false;
+  }
+
+  // transform the object into an array
+  var updateArray = [];
+  if (params.nodes.length > 0) {
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        // console.log(allNodes[nodeId]);
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  } else {
+    // console.log("Nothing was selected");
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        // console.log(allNodes[nodeId]);
+        // allNodes[nodeId].color = {};
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  }
+}
+
+function filterHighlight(params) {
+  allNodes = nodes.get({ returnType: "Object" });
+  // if something is selected:
+  if (params.nodes.length > 0) {
+    filterActive = true;
+    let selectedNodes = params.nodes;
+
+    // hiding all nodes and saving the label
+    for (let nodeId in allNodes) {
+      allNodes[nodeId].hidden = true;
+      if (allNodes[nodeId].savedLabel === undefined) {
+        allNodes[nodeId].savedLabel = allNodes[nodeId].label;
+        allNodes[nodeId].label = undefined;
+      }
+    }
+
+    for (let i=0; i < selectedNodes.length; i++) {
+      allNodes[selectedNodes[i]].hidden = false;
+      if (allNodes[selectedNodes[i]].savedLabel !== undefined) {
+        allNodes[selectedNodes[i]].label = allNodes[selectedNodes[i]].savedLabel;
+        allNodes[selectedNodes[i]].savedLabel = undefined;
+      }
+    }
+
+  } else if (filterActive === true) {
+    // reset all nodes
+    for (let nodeId in allNodes) {
+      allNodes[nodeId].hidden = false;
+      if (allNodes[nodeId].savedLabel !== undefined) {
+        allNodes[nodeId].label = allNodes[nodeId].savedLabel;
+        allNodes[nodeId].savedLabel = undefined;
+      }
+    }
+    filterActive = false;
+  }
+
+  // transform the object into an array
+  var updateArray = [];
+  if (params.nodes.length > 0) {
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  } else {
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  }
+}
+
+function selectNode(nodes) {
+  network.selectNodes(nodes);
+  neighbourhoodHighlight({ nodes: nodes });
+  return nodes;
+}
+
+function selectNodes(nodes) {
+  network.selectNodes(nodes);
+  filterHighlight({nodes: nodes});
+  return nodes;
+}
+
+function highlightFilter(filter) {
+  let selectedNodes = []
+  let selectedProp = filter['property']
+  if (filter['item'] === 'node') {
+    let allNodes = nodes.get({ returnType: "Object" });
+    for (let nodeId in allNodes) {
+      if (allNodes[nodeId][selectedProp] && filter['value'].includes((allNodes[nodeId][selectedProp]).toString())) {
+        selectedNodes.push(nodeId)
+      }
+    }
+  }
+  else if (filter['item'] === 'edge'){
+    let allEdges = edges.get({returnType: 'object'});
+    // check if the selected property exists for selected edge and select the nodes connected to the edge
+    for (let edge in allEdges) {
+      if (allEdges[edge][selectedProp] && filter['value'].includes((allEdges[edge][selectedProp]).toString())) {
+        selectedNodes.push(allEdges[edge]['from'])
+        selectedNodes.push(allEdges[edge]['to'])
+      }
+    }
+  }
+  selectNodes(selectedNodes)
+}</script>
+            <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.2/dist/dist/vis-network.min.css" integrity="sha512-WgxfT5LWjfszlPHXRmBWHkV2eceiWTOBvrKCNbdgDYTHrT2AeLCGbF4sZlZw3UMN3WtL0tGUoIAKsu8mllg/XA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+            <script src="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.2/dist/vis-network.min.js" integrity="sha512-LnvoEWDFrqGHlHmDD2101OrLcbsfkrzoSpvtSQtxK3RMnRV0eOkhhBN2dXHKRrUU8p2DGRTk35n4O8nWSVe1mQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+            
+            
+            
+            
+            
+            
+                <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/tom-select/2.0.0-rc.4/css/tom-select.min.css" integrity="sha512-43fHB3GLgZfz8QXl1RPQ8O66oIgv3po9cJ5erMt1c4QISq9dYb195T3vr5ImnJPXuVroKcGBPXBFKETW8jrPNQ==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+                <script src="https://cdnjs.cloudflare.com/ajax/libs/tom-select/2.0.0-rc.4/js/tom-select.complete.js" integrity="sha512-jeF9CfnvzDiw9G9xiksVjxR2lib44Gnovvkv+3CgCG6NXCD4gqlA5nDAVW5WjpA+i+/zKsUWV5xNEbW1X/HH0Q==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+            
+
+        
+<center>
+<h1></h1>
+</center>
+
+<!-- <link rel="stylesheet" href="../node_modules/vis/dist/vis.min.css" type="text/css" />
+<script type="text/javascript" src="../node_modules/vis/dist/vis.js"> </script>-->
+        <link
+          href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta3/dist/css/bootstrap.min.css"
+          rel="stylesheet"
+          integrity="sha384-eOJMYsd53ii+scO/bJGFsiCZc+5NDVN2yr8+0RDqr0Ql0h+rP48ckxlpbzKgwra6"
+          crossorigin="anonymous"
+        />
+        <script
+          src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta3/dist/js/bootstrap.bundle.min.js"
+          integrity="sha384-JEW9xMcG8R+pH31jmWH6WWP0WintQrMb4s7ZOdauHnUtxwoG2vI5DkLtS3qm9Ekf"
+          crossorigin="anonymous"
+        ></script>
+
+
+        <center>
+          <h1></h1>
+        </center>
+        <style type="text/css">
+
+             #mynetwork {
+                 width: 100%;
+                 height: 1000;
+                 background-color: #ffffff;
+                 border: 1px solid lightgray;
+                 position: relative;
+                 float: left;
+             }
+
+             
+             #loadingBar {
+                 position:absolute;
+                 top:0px;
+                 left:0px;
+                 width: 100%;
+                 height: 1000;
+                 background-color:rgba(200,200,200,0.8);
+                 -webkit-transition: all 0.5s ease;
+                 -moz-transition: all 0.5s ease;
+                 -ms-transition: all 0.5s ease;
+                 -o-transition: all 0.5s ease;
+                 transition: all 0.5s ease;
+                 opacity:1;
+             }
+
+             #bar {
+                 position:absolute;
+                 top:0px;
+                 left:0px;
+                 width:20px;
+                 height:20px;
+                 margin:auto auto auto auto;
+                 border-radius:11px;
+                 border:2px solid rgba(30,30,30,0.05);
+                 background: rgb(0, 173, 246); /* Old browsers */
+                 box-shadow: 2px 0px 4px rgba(0,0,0,0.4);
+             }
+
+             #border {
+                 position:absolute;
+                 top:10px;
+                 left:10px;
+                 width:500px;
+                 height:23px;
+                 margin:auto auto auto auto;
+                 box-shadow: 0px 0px 4px rgba(0,0,0,0.2);
+                 border-radius:10px;
+             }
+
+             #text {
+                 position:absolute;
+                 top:8px;
+                 left:530px;
+                 width:30px;
+                 height:50px;
+                 margin:auto auto auto auto;
+                 font-size:22px;
+                 color: #000000;
+             }
+
+             div.outerBorder {
+                 position:relative;
+                 top:400px;
+                 width:600px;
+                 height:44px;
+                 margin:auto auto auto auto;
+                 border:8px solid rgba(0,0,0,0.1);
+                 background: rgb(252,252,252); /* Old browsers */
+                 background: -moz-linear-gradient(top,  rgba(252,252,252,1) 0%, rgba(237,237,237,1) 100%); /* FF3.6+ */
+                 background: -webkit-gradient(linear, left top, left bottom, color-stop(0%,rgba(252,252,252,1)), color-stop(100%,rgba(237,237,237,1))); /* Chrome,Safari4+ */
+                 background: -webkit-linear-gradient(top,  rgba(252,252,252,1) 0%,rgba(237,237,237,1) 100%); /* Chrome10+,Safari5.1+ */
+                 background: -o-linear-gradient(top,  rgba(252,252,252,1) 0%,rgba(237,237,237,1) 100%); /* Opera 11.10+ */
+                 background: -ms-linear-gradient(top,  rgba(252,252,252,1) 0%,rgba(237,237,237,1) 100%); /* IE10+ */
+                 background: linear-gradient(to bottom,  rgba(252,252,252,1) 0%,rgba(237,237,237,1) 100%); /* W3C */
+                 filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#fcfcfc', endColorstr='#ededed',GradientType=0 ); /* IE6-9 */
+                 border-radius:72px;
+                 box-shadow: 0px 0px 10px rgba(0,0,0,0.2);
+             }
+             
+
+             
+
+             
+        </style>
+    </head>
+
+
+    <body>
+        <div class="card" style="width: 100%">
+            
+                <div id="select-menu" class="card-header">
+                    <div class="row no-gutters">
+                        <div class="col-10 pb-2">
+                            <select
+                            class="form-select"
+                            aria-label="Default select example"
+                            onchange="selectNode([value]);"
+                            id="select-node"
+                            placeholder="Select node..."
+                            >
+                                <option selected>Select a Node by ID</option>
+                                
+                                    <option value="ME9-D2-BKS">ME9-D2-BKS</option>
+                                
+                                    <option value="ME-D2-CBU">ME-D2-CBU</option>
+                                
+                                    <option value="ME-D2-CKP">ME-D2-CKP</option>
+                                
+                                    <option value="ME-D2-CPL">ME-D2-CPL</option>
+                                
+                                    <option value="ME-D2-PWK">ME-D2-PWK</option>
+                                
+                                    <option value="ME-D2-RDK">ME-D2-RDK</option>
+                                
+                                    <option value="ME-D3-PLD">ME-D3-PLD</option>
+                                
+                                    <option value="ME-D2-PLD">ME-D2-PLD</option>
+                                
+                                    <option value="ME9-D2-JT">ME9-D2-JT</option>
+                                
+                                    <option value="ME-D2-JTS">ME-D2-JTS</option>
+                                
+                                    <option value="ME-D2-KRW">ME-D2-KRW</option>
+                                
+                                    <option value="ME-D2-TLJ">ME-D2-TLJ</option>
+                                
+                                    <option value="ME-D3-JBL">ME-D3-JBL</option>
+                                
+                                    <option value="ME-D3-KYA">ME-D3-KYA</option>
+                                
+                                    <option value="ME9-D3-CBN">ME9-D3-CBN</option>
+                                
+                                    <option value="ME-D2-KLI">ME-D2-KLI</option>
+                                
+                                    <option value="ME-A-JWB-RDC">ME-A-JWB-RDC</option>
+                                
+                                    <option value="ME-D3-GGK">ME-D3-GGK</option>
+                                
+                                    <option value="ME3-A-JWB-RDC">ME3-A-JWB-RDC</option>
+                                
+                                    <option value="ME-D3-CSA">ME-D3-CSA</option>
+                                
+                                    <option value="ME-B-JWB-TTC">ME-B-JWB-TTC</option>
+                                
+                                    <option value="ME-D3-JCG">ME-D3-JCG</option>
+                                
+                                    <option value="ME-D3-LEM">ME-D3-LEM</option>
+                                
+                                    <option value="ME9-D3-CCD">ME9-D3-CCD</option>
+                                
+                                    <option value="ME-D3-AWN">ME-D3-AWN</option>
+                                
+                                    <option value="ME-D3-JTB">ME-D3-JTB</option>
+                                
+                                    <option value="ME-D3-RGA">ME-D3-RGA</option>
+                                
+                                    <option value="ME-D3-IMY">ME-D3-IMY</option>
+                                
+                                    <option value="ME-D3-BJL">ME-D3-BJL</option>
+                                
+                                    <option value="ME-D3-JPK">ME-D3-JPK</option>
+                                
+                                    <option value="ME-D3-NLD">ME-D3-NLD</option>
+                                
+                                    <option value="ME-D3-SKB">ME-D3-SKB</option>
+                                
+                                    <option value="ME-D3-CJR">ME-D3-CJR</option>
+                                
+                                    <option value="ME-D3-BJN">ME-D3-BJN</option>
+                                
+                                    <option value="ME-D3-MJA">ME-D3-MJA</option>
+                                
+                                    <option value="ME-D3-PLN">ME-D3-PLN</option>
+                                
+                                    <option value="ME-D3-RCK">ME-D3-RCK</option>
+                                
+                                    <option value="ME9-D3-LBG">ME9-D3-LBG</option>
+                                
+                                    <option value="ME-D3-CLK">ME-D3-CLK</option>
+                                
+                                    <option value="ME-D3-GRT">ME-D3-GRT</option>
+                                
+                                    <option value="ME-D3-LAG">ME-D3-LAG</option>
+                                
+                                    <option value="ME-D3-TAS">ME-D3-TAS</option>
+                                
+                                    <option value="ME-D3-BJR">ME-D3-BJR</option>
+                                
+                                    <option value="ME-D3-BJS">ME-D3-BJS</option>
+                                
+                                    <option value="ME-D3-CMS">ME-D3-CMS</option>
+                                
+                                    <option value="ME-D3-MON">ME-D3-MON</option>
+                                
+                                    <option value="ME-D3-PGN">ME-D3-PGN</option>
+                                
+                                    <option value="ME-D3-TSM">ME-D3-TSM</option>
+                                
+                                    <option value="ME-D3-KAW">ME-D3-KAW</option>
+                                
+                                    <option value="ME9-D3-TSM">ME9-D3-TSM</option>
+                                
+                                    <option value="ME-D3-PRG">ME-D3-PRG</option>
+                                
+                                    <option value="ME-D3-CBL">ME-D3-CBL</option>
+                                
+                                    <option value="ME-D3-MLO">ME-D3-MLO</option>
+                                
+                                    <option value="ME-D3-SPA">ME-D3-SPA</option>
+                                
+                                    <option value="ME-D3-BON">ME-D3-BON</option>
+                                
+                                    <option value="ME-D3-KRL">ME-D3-KRL</option>
+                                
+                                    <option value="ME-D3-LSR">ME-D3-LSR</option>
+                                
+                                    <option value="ME-D3-PAT">ME-D3-PAT</option>
+                                
+                                    <option value="ME3-D3-CBN">ME3-D3-CBN</option>
+                                
+                                    <option value="ME-D3-BTJ">ME-D3-BTJ</option>
+                                
+                                    <option value="ME-D3-CLL">ME-D3-CLL</option>
+                                
+                                    <option value="ME-D3-PDL">ME-D3-PDL</option>
+                                
+                                    <option value="ME-D3-NJG">ME-D3-NJG</option>
+                                
+                                    <option value="ME-D3-CJG">ME-D3-CJG</option>
+                                
+                                    <option value="ME-D3-KPO">ME-D3-KPO</option>
+                                
+                                    <option value="ME-D3-SDA">ME-D3-SDA</option>
+                                
+                                    <option value="ME-D3-SOR">ME-D3-SOR</option>
+                                
+                                    <option value="ME-D3-CBB">ME-D3-CBB</option>
+                                
+                                    <option value="ME-D3-SGA">ME-D3-SGA</option>
+                                
+                                    <option value="ME-D3-CKB">ME-D3-CKB</option>
+                                
+                                    <option value="ME-D3-CMK">ME-D3-CMK</option>
+                                
+                                    <option value="ME-D3-PLR">ME-D3-PLR</option>
+                                
+                                    <option value="ME-D3-TGN">ME-D3-TGN</option>
+                                
+                                    <option value="ME-D3-CBD">ME-D3-CBD</option>
+                                
+                                    <option value="ME-D3-CCR">ME-D3-CCR</option>
+                                
+                                    <option value="ME-D3-SGN">ME-D3-SGN</option>
+                                
+                                    <option value="ME-B-JWB-KAL">ME-B-JWB-KAL</option>
+                                
+                                    <option value="ME-D3-KAL">ME-D3-KAL</option>
+                                
+                                    <option value="ME-D3-CPH">ME-D3-CPH</option>
+                                
+                                    <option value="ME-D3-CKJ">ME-D3-CKJ</option>
+                                
+                                    <option value="ME-D3-RJP">ME-D3-RJP</option>
+                                
+                                    <option value="ME-D3-CBT">ME-D3-CBT</option>
+                                
+                                    <option value="ME-D3-KDA">ME-D3-KDA</option>
+                                
+                                    <option value="ME-D3-WNR">ME-D3-WNR</option>
+                                
+                                    <option value="ME-D3-CIW">ME-D3-CIW</option>
+                                
+                                    <option value="ME-D3-CCD-RR">ME-D3-CCD-RR</option>
+                                
+                                    <option value="ME2-D3-CCD-1">ME2-D3-CCD-1</option>
+                                
+                                    <option value="ME2-D3-CCD-2">ME2-D3-CCD-2</option>
+                                
+                                    <option value="ME-D3-KPN">ME-D3-KPN</option>
+                                
+                                    <option value="ME-D3-KNG">ME-D3-KNG</option>
+                                
+                                    <option value="ME-D3-CJA">ME-D3-CJA</option>
+                                
+                                    <option value="ME-D3-TGG">ME-D3-TGG</option>
+                                
+                                    <option value="ME-HRB-JWB-NISP">ME-HRB-JWB-NISP</option>
+                                
+                                    <option value="ME-D3-CMI">ME-D3-CMI</option>
+                                
+                                    <option value="ME-D3-DGO">ME-D3-DGO</option>
+                                
+                                    <option value="ME-D3-JPT">ME-D3-JPT</option>
+                                
+                                    <option value="ME-D3-SMD">ME-D3-SMD</option>
+                                
+                                    <option value="ME-D3-TGA">ME-D3-TGA</option>
+                                
+                                    <option value="ME-D3-UBR">ME-D3-UBR</option>
+                                
+                                    <option value="ME2-D3-CCD">ME2-D3-CCD</option>
+                                
+                                    <option value="ME3-D3-LBG">ME3-D3-LBG</option>
+                                
+                                    <option value="ME-B-JWB-JPT">ME-B-JWB-JPT</option>
+                                
+                                    <option value="ME-D3-CPT">ME-D3-CPT</option>
+                                
+                                    <option value="ME-D3-CKG">ME-D3-CKG</option>
+                                
+                                    <option value="ME-D3-PMP">ME-D3-PMP</option>
+                                
+                                    <option value="ME-D3-MJL">ME-D3-MJL</option>
+                                
+                                    <option value="ME-D3-CLM">ME-D3-CLM</option>
+                                
+                                    <option value="ME-D3-KAD">ME-D3-KAD</option>
+                                
+                                    <option value="ME-D3-CKK">ME-D3-CKK</option>
+                                
+                                    <option value="ME-D3-CKW">ME-D3-CKW</option>
+                                
+                                    <option value="ME-D3-SKI">ME-D3-SKI</option>
+                                
+                                    <option value="ME-D3-CKL">ME-D3-CKL</option>
+                                
+                                    <option value="ME-D3-CWD">ME-D3-CWD</option>
+                                
+                                    <option value="ME-D3-JTW">ME-D3-JTW</option>
+                                
+                                    <option value="ME-D3-SDU">ME-D3-SDU</option>
+                                
+                                    <option value="ME3-A-JWB-CBN">ME3-A-JWB-CBN</option>
+                                
+                                    <option value="ME-D3-RJW">ME-D3-RJW</option>
+                                
+                                    <option value="ME-D3-SUB">ME-D3-SUB</option>
+                                
+                                    <option value="ME-D3-CSM">ME-D3-CSM</option>
+                                
+                                    <option value="ME-D3-PAU">ME-D3-PAU</option>
+                                
+                                    <option value="ME-D3-PMN">ME-D3-PMN</option>
+                                
+                                    <option value="ME-D3-KLJ">ME-D3-KLJ</option>
+                                
+                                    <option value="ME-D3-HGM">ME-D3-HGM</option>
+                                
+                                    <option value="ME-HRB-JWB-RNC-TSEL">ME-HRB-JWB-RNC-TSEL</option>
+                                
+                                    <option value="ME-D3-TSEL-DGO">ME-D3-TSEL-DGO</option>
+                                
+                                    <option value="ME-D3-HAR">ME-D3-HAR</option>
+                                
+                                    <option value="ME-D3-PGD">ME-D3-PGD</option>
+                                
+                                    <option value="ME4-D3-LBG">ME4-D3-LBG</option>
+                                
+                                    <option value="ME4-A-JWB-SNT">ME4-A-JWB-SNT</option>
+                                
+                                    <option value="ME-D3-HRB-NISP">ME-D3-HRB-NISP</option>
+                                
+                                    <option value="ME-A-JWB-TGG">ME-A-JWB-TGG</option>
+                                
+                                    <option value="ME-D3-LBG">ME-D3-LBG</option>
+                                
+                                    <option value="ME-A-JWB-SMD">ME-A-JWB-SMD</option>
+                                
+                                    <option value="ME-D3-KCI">ME-D3-KCI</option>
+                                
+                                    <option value="ME-B-JWB-LOS">ME-B-JWB-LOS</option>
+                                
+                                    <option value="ME-D3-LOS">ME-D3-LOS</option>
+                                
+                                    <option value="ME-D3-LBG-RR">ME-D3-LBG-RR</option>
+                                
+                                    <option value="ME-D3-PAB">ME-D3-PAB</option>
+                                
+                                    <option value="ME-D3-TTC">ME-D3-TTC</option>
+                                
+                                    <option value="ME-B-JKT-TTC">ME-B-JKT-TTC</option>
+                                
+                                    <option value="ME-D3-CCD-RR-1">ME-D3-CCD-RR-1</option>
+                                
+                                    <option value="ME-D3-CCD-RR-2">ME-D3-CCD-RR-2</option>
+                                
+                                    <option value="ME2-D3-TTC">ME2-D3-TTC</option>
+                                
+                                    <option value="ME-A-JWB-GGK_2">ME-A-JWB-GGK_2</option>
+                                
+                                    <option value="TO_7750">TO_7750</option>
+                                
+                                    <option value="ME3-D3-RDC">ME3-D3-RDC</option>
+                                
+                                    <option value="ME-A-JWB-GGK">ME-A-JWB-GGK</option>
+                                
+                                    <option value="ME-A-JWB-RDC-LINK2">ME-A-JWB-RDC-LINK2</option>
+                                
+                            </select>
+                        </div>
+                        <div class="col-2 pb-2">
+                            <button type="button" class="btn btn-primary btn-block" onclick="neighbourhoodHighlight({nodes: []});">Reset Selection</button>
+                        </div>
+                    </div>
+                </div>
+            
+            
+              <div id="filter-menu" class="card-header">
+                <div class="row no-gutters">
+                  <div class="col-3 pb-2">
+                    <select
+                            class="form-select"
+                            aria-label="Default select example"
+                            onchange="updateFilter(value, 'item')"
+                            id="select-item"
+                        >
+                        <option value="">Select a network item</option>
+                        <option value="edge">edge</option>
+                        <option value="node">node</option>
+                    </select>
+                  </div>
+                  <div class="col-3 pb-2">
+                    <select
+                            class="form-select"
+                            aria-label="Default select example"
+                            onchange="updateFilter(value, 'property')"
+                            id="select-property"
+                        >
+                        <option value="">Select a property...</option>
+                    </select>
+                  </div>
+                  <div class="col-3 pb-2">
+                    <select
+                            class="form-select"
+                            aria-label="Default select example"
+                            id="select-value"
+                        >
+                        <option value="">Select value(s)...</option>
+                    </select>
+                  </div>
+                  <div class="col-1 pb-2">
+                    <button type="button" class="btn btn-primary btn-block" onclick="highlightFilter(filter);">Filter</button>
+                  </div>
+                  <div class="col-2 pb-2">
+                    <button type="button" class="btn btn-primary btn-block" onclick="clearFilter(true)">Reset Selection</button>
+                  </div>
+                </div>
+              </div>
+            
+            <div id="mynetwork" class="card-body"></div>
+        </div>
+
+        
+            <div id="loadingBar">
+              <div class="outerBorder">
+                <div id="text">0%</div>
+                <div id="border">
+                  <div id="bar"></div>
+                </div>
+              </div>
+            </div>
+        
+        
+
+        <script type="text/javascript">
+
+              // initialize global variables.
+              var edges;
+              var nodes;
+              var allNodes;
+              var allEdges;
+              var nodeColors;
+              var originalNodes;
+              var network;
+              var container;
+              var options, data;
+              var filter = {
+                  item : '',
+                  property : '',
+                  value : []
+              };
+
+              
+                  new TomSelect("#select-node",{
+                      create: false,
+                      sortField: {
+                          field: "text",
+                          direction: "asc"
+                      }
+                  });
+              
+
+              
+                  // explicitly using onItemAdd and this function as we need to save multiple values
+                  let updateValueFilter = function() {
+                      return function () {
+                      filter['value'].push(arguments[0])
+                      }
+                  }
+
+                  let valueControl = new TomSelect("#select-value",{
+                      maxItems: null,
+                      valueField: 'id',
+                      labelField: 'title',
+                      searchField: 'title',
+                      create: false,
+                      sortField: {
+                          field: "text",
+                          direction: "asc"
+                      },
+                      onItemAdd: updateValueFilter()
+                  });
+
+                  let addValues = function() {
+                      return function () {
+                          // clear the current value options and add the selected attribute values
+                          // tom-select handles duplicates
+                          let selectedProperty = arguments[0];
+                          valueControl.clear();
+                          valueControl.clearOptions();
+                          filter['value'] = []
+                          if (filter['item'] === 'node') {
+                              for (let each in allNodes) {
+                                  valueControl.addOption({
+                                      id:allNodes[each][selectedProperty],
+                                      title:allNodes[each][selectedProperty]
+                                  })
+                              }
+                          }
+                          else if (filter['item'] === 'edge') {
+                              for (let each in allEdges) {
+                                  valueControl.addOption({
+                                      id:allEdges[each][selectedProperty],
+                                      title:allEdges[each][selectedProperty]
+                                  })
+                              }
+                          }
+                      }
+                  };
+
+                  let propControl = new TomSelect("#select-property",{
+                      valueField: 'id',
+                      labelField: 'title',
+                      searchField: 'title',
+                      create: false,
+                      sortField: {
+                          field: "text",
+                          direction: "asc"
+                      },
+                      onItemAdd: addValues()
+                  });
+
+                  let addProperties = function() {
+                      return function () {
+                          // loops through the selected network item and adds the attributes to dropdown
+                          // tom-select handles duplicates
+                          clearFilter(false)
+                          if (arguments[0] === 'edge') {
+                              for (let each in allEdges) {
+                                  if (allEdges.hasOwnProperty(each)) {
+                                      for (let eachProp in allEdges[each]) {
+                                          if (allEdges[each].hasOwnProperty(eachProp)) {
+                                              propControl.addOption({id: eachProp, title: eachProp})
+                                          }
+                                      }
+                                  }
+                              }
+                          }
+                          else if (arguments[0] === 'node') {
+                              for (let each in allNodes) {
+                                  if (allNodes.hasOwnProperty(each)) {
+                                      for (let eachProp in allNodes[each]) {
+                                          if (allNodes[each].hasOwnProperty(eachProp)
+                                              && (eachProp !== 'hidden' && eachProp !== 'savedLabel'
+                                                  && eachProp !== 'hiddenLabel')) {
+                                              propControl.addOption({id: eachProp, title: eachProp})
+
+                                          }
+                                      }
+                                  }
+                              }
+                          }
+                      }
+                  };
+
+                  let itemControl = new TomSelect("#select-item",{
+                      create: false,
+                      sortField:{
+                          field: "text",
+                          direction: "asc"
+                      },
+                      onItemAdd: addProperties()
+                  });
+
+                  function clearFilter(reset) {
+                      // utility function to clear all the selected filter options
+                      // if reset is set to true, the existing filter will be removed
+                      // else, only the dropdown options are cleared
+                      propControl.clear();
+                      propControl.clearOptions();
+                      valueControl.clear();
+                      valueControl.clearOptions();
+                      filter = {
+                          item : '',
+                          property : '',
+                          value : []
+                      }
+                      if (reset) {
+                          itemControl.clear();
+                          filterHighlight({nodes: []})
+                      }
+                  }
+
+                  function updateFilter(value, key) {
+                      // key could be 'item' or 'property' and value is as selected in dropdown
+                      filter[key] = value
+                  }
+
+              
+
+              // This method is responsible for drawing the graph, returns the drawn network
+              function drawGraph() {
+                  var container = document.getElementById('mynetwork');
+
+                  
+
+                  // parsing and collecting nodes and edges from the python
+                  nodes = new vis.DataSet([{"chassis": "7950 XRS-20", "cluster": "bks_jtn", "color": "red", "id": "ME9-D2-BKS", "label": "ME9-D2-BKS", "shape": "dot", "size": 10}, {"chassis": "7750 SR-a8", "cluster": "bks_jtn", "color": "silver", "id": "ME-D2-CBU", "label": "ME-D2-CBU", "shape": "dot", "size": 10}, {"chassis": "7750 SR-7", "cluster": "bks_jtn", "color": "green", "id": "ME-D2-CKP", "label": "ME-D2-CKP", "shape": "dot", "size": 10}, {"chassis": "7450 ESS-6", "cluster": "bks_jtn", "color": "silver", "id": "ME-D2-CPL", "label": "ME-D2-CPL", "shape": "dot", "size": 10}, {"chassis": "7750 SR-12", "cluster": "bks_jtn", "color": "silver", "id": "ME-D2-PWK", "label": "ME-D2-PWK", "shape": "dot", "size": 10}, {"chassis": "7750 SR-a8", "cluster": "bks_jtn", "color": "silver", "id": "ME-D2-RDK", "label": "ME-D2-RDK", "shape": "dot", "size": 10}, {"chassis": "7750 SR-7", "cluster": "bks_jtn", "color": "silver", "id": "ME-D3-PLD", "label": "ME-D3-PLD", "shape": "dot", "size": 10}, {"chassis": "7450 ESS-6", "cluster": "bks_jtn", "color": "silver", "id": "ME-D2-PLD", "label": "ME-D2-PLD", "shape": "dot", "size": 10}, {"chassis": "7950 XRS-20", "cluster": "bks_jtn", "color": "red", "id": "ME9-D2-JT", "label": "ME9-D2-JT", "shape": "dot", "size": 10}, {"chassis": "7750 SR-7", "cluster": "bks_jtn", "color": "silver", "id": "ME-D2-JTS", "label": "ME-D2-JTS", "shape": "dot", "size": 10}, {"chassis": "7750 SR-7", "cluster": "bks_jtn", "color": "green", "id": "ME-D2-KRW", "label": "ME-D2-KRW", "shape": "dot", "size": 10}, {"chassis": "7750 SR-7", "cluster": "bks_jtn", "color": "silver", "id": "ME-D2-TLJ", "label": "ME-D2-TLJ", "shape": "dot", "size": 10}, {"chassis": "7750 SR-7", "cluster": "bks_jtn", "color": "silver", "id": "ME-D3-JBL", "label": "ME-D3-JBL", "shape": "dot", "size": 10}, {"chassis": "7750 SR-7", "cluster": "cbn_tsm", "color": "green", "id": "ME-D3-KYA", "label": "ME-D3-KYA", "shape": "dot", "size": 10}, {"chassis": "7950 XRS-20", "cluster": "cbn_tsm", "color": "red", "id": "ME9-D3-CBN", "label": "ME9-D3-CBN", "shape": "dot", "size": 10}, {"chassis": "7750 SR-7", "cluster": "bks_jtn", "color": "silver", "id": "ME-D2-KLI", "label": "ME-D2-KLI", "shape": "dot", "size": 10}, {"chassis": "7750 SR-7", "cluster": "lbg_ccd", "color": "silver", "id": "ME-A-JWB-RDC", "label": "ME-A-JWB-RDC", "shape": "dot", "size": 10}, {"chassis": "7750 SR-7", "cluster": "lbg_ccd", "color": "green", "id": "ME-D3-GGK", "label": "ME-D3-GGK", "shape": "dot", "size": 10}, {"chassis": "0", "cluster": "lbg_ccd", "color": "silver", "id": "ME3-A-JWB-RDC", "label": "ME3-A-JWB-RDC", "shape": "dot", "size": 10}, {"chassis": "7450 ESS-6", "cluster": "lbg_ccd", "color": "silver", "id": "ME-D3-CSA", "label": "ME-D3-CSA", "shape": "dot", "size": 10}, {"chassis": "0", "cluster": "lbg_ccd", "color": "silver", "id": "ME-B-JWB-TTC", "label": "ME-B-JWB-TTC", "shape": "dot", "size": 10}, {"chassis": "7750 SR-7", "cluster": "lbg_ccd", "color": "silver", "id": "ME-D3-JCG", "label": "ME-D3-JCG", "shape": "dot", "size": 10}, {"chassis": "7750 SR-7", "cluster": "lbg_ccd", "color": "green", "id": "ME-D3-LEM", "label": "ME-D3-LEM", "shape": "dot", "size": 10}, {"chassis": "7750 SR-12", "cluster": "lbg_ccd", "color": "red", "id": "ME9-D3-CCD", "label": "ME9-D3-CCD", "shape": "dot", "size": 10}, {"chassis": "7750 SR-7", "cluster": "cbn_tsm", "color": "silver", "id": "ME-D3-AWN", "label": "ME-D3-AWN", "shape": "dot", "size": 10}, {"chassis": "7750 SR-7", "cluster": "cbn_tsm", "color": "silver", "id": "ME-D3-JTB", "label": "ME-D3-JTB", "shape": "dot", "size": 10}, {"chassis": "7750 SR-a8", "cluster": "cbn_tsm", "color": "silver", "id": "ME-D3-RGA", "label": "ME-D3-RGA", "shape": "dot", "size": 10}, {"chassis": "7750 SR-7", "cluster": "cbn_tsm", "color": "silver", "id": "ME-D3-IMY", "label": "ME-D3-IMY", "shape": "dot", "size": 10}, {"chassis": "7450 ESS-6", "cluster": "lbg_ccd", "color": "silver", "id": "ME-D3-BJL", "label": "ME-D3-BJL", "shape": "dot", "size": 10}, {"chassis": "7750 SR-7", "cluster": "lbg_ccd", "color": "silver", "id": "ME-D3-JPK", "label": "ME-D3-JPK", "shape": "dot", "size": 10}, {"chassis": "7750 SR-7", "cluster": "lbg_ccd", "color": "green", "id": "ME-D3-NLD", "label": "ME-D3-NLD", "shape": "dot", "size": 10}, {"chassis": "7750 SR-12", "cluster": "lbg_ccd", "color": "silver", "id": "ME-D3-SKB", "label": "ME-D3-SKB", "shape": "dot", "size": 10}, {"chassis": "7750 SR-7", "cluster": "lbg_ccd", "color": "green", "id": "ME-D3-CJR", "label": "ME-D3-CJR", "shape": "dot", "size": 10}, {"chassis": "7750 SR-7", "cluster": "lbg_ccd", "color": "silver", "id": "ME-D3-BJN", "label": "ME-D3-BJN", "shape": "dot", "size": 10}, {"chassis": "7750 SR-12", "cluster": "lbg_ccd", "color": "silver", "id": "ME-D3-MJA", "label": "ME-D3-MJA", "shape": "dot", "size": 10}, {"chassis": "7750 SR-7", "cluster": "lbg_ccd", "color": "silver", "id": "ME-D3-PLN", "label": "ME-D3-PLN", "shape": "dot", "size": 10}, {"chassis": "7750 SR-7", "cluster": "lbg_ccd", "color": "green", "id": "ME-D3-RCK", "label": "ME-D3-RCK", "shape": "dot", "size": 10}, {"chassis": "7950 XRS-20", "cluster": "lbg_ccd", "color": "red", "id": "ME9-D3-LBG", "label": "ME9-D3-LBG", "shape": "dot", "size": 10}, {"chassis": "7750 SR-7", "cluster": "lbg_ccd", "color": "silver", "id": "ME-D3-CLK", "label": "ME-D3-CLK", "shape": "dot", "size": 10}, {"chassis": "7750 SR-7", "cluster": "cbn_tsm", "color": "silver", "id": "ME-D3-GRT", "label": "ME-D3-GRT", "shape": "dot", "size": 10}, {"chassis": "7750 SR-7", "cluster": "lbg_ccd", "color": "silver", "id": "ME-D3-LAG", "label": "ME-D3-LAG", "shape": "dot", "size": 10}, {"chassis": "7750 SR-7", "cluster": "lbg_ccd", "color": "silver", "id": "ME-D3-TAS", "label": "ME-D3-TAS", "shape": "dot", "size": 10}, {"chassis": "7750 SR-7", "cluster": "cbn_tsm", "color": "silver", "id": "ME-D3-BJR", "label": "ME-D3-BJR", "shape": "dot", "size": 10}, {"chassis": "7750 SR-7", "cluster": "cbn_tsm", "color": "silver", "id": "ME-D3-BJS", "label": "ME-D3-BJS", "shape": "dot", "size": 10}, {"chassis": "7750 SR-7", "cluster": "cbn_tsm", "color": "silver", "id": "ME-D3-CMS", "label": "ME-D3-CMS", "shape": "dot", "size": 10}, {"chassis": "7750 SR-a8", "cluster": "cbn_tsm", "color": "silver", "id": "ME-D3-MON", "label": "ME-D3-MON", "shape": "dot", "size": 10}, {"chassis": "7750 SR-7", "cluster": "cbn_tsm", "color": "silver", "id": "ME-D3-PGN", "label": "ME-D3-PGN", "shape": "dot", "size": 10}, {"chassis": "7750 SR-7", "cluster": "cbn_tsm", "color": "green", "id": "ME-D3-TSM", "label": "ME-D3-TSM", "shape": "dot", "size": 10}, {"chassis": "7750 SR-7", "cluster": "cbn_tsm", "color": "silver", "id": "ME-D3-KAW", "label": "ME-D3-KAW", "shape": "dot", "size": 10}, {"chassis": "7750 SR-12", "cluster": "cbn_tsm", "color": "red", "id": "ME9-D3-TSM", "label": "ME9-D3-TSM", "shape": "dot", "size": 10}, {"chassis": "7750 SR-a8", "cluster": "cbn_tsm", "color": "silver", "id": "ME-D3-PRG", "label": "ME-D3-PRG", "shape": "dot", "size": 10}, {"chassis": "7750 SR-7", "cluster": "cbn_tsm", "color": "silver", "id": "ME-D3-CBL", "label": "ME-D3-CBL", "shape": "dot", "size": 10}, {"chassis": "7750 SR-7", "cluster": "cbn_tsm", "color": "silver", "id": "ME-D3-MLO", "label": "ME-D3-MLO", "shape": "dot", "size": 10}, {"chassis": "7750 SR-7", "cluster": "cbn_tsm", "color": "silver", "id": "ME-D3-SPA", "label": "ME-D3-SPA", "shape": "dot", "size": 10}, {"chassis": "7750 SR-7", "cluster": "cbn_tsm", "color": "silver", "id": "ME-D3-BON", "label": "ME-D3-BON", "shape": "dot", "size": 10}, {"chassis": "7750 SR-7", "cluster": "cbn_tsm", "color": "silver", "id": "ME-D3-KRL", "label": "ME-D3-KRL", "shape": "dot", "size": 10}, {"chassis": "7750 SR-7", "cluster": "cbn_tsm", "color": "silver", "id": "ME-D3-LSR", "label": "ME-D3-LSR", "shape": "dot", "size": 10}, {"chassis": "7750 SR-7", "cluster": "cbn_tsm", "color": "silver", "id": "ME-D3-PAT", "label": "ME-D3-PAT", "shape": "dot", "size": 10}, {"chassis": "7750 SR-12", "cluster": "cbn_tsm", "color": "silver", "id": "ME3-D3-CBN", "label": "ME3-D3-CBN", "shape": "dot", "size": 10}, {"chassis": "7750 SR-7", "cluster": "lbg_ccd", "color": "green", "id": "ME-D3-BTJ", "label": "ME-D3-BTJ", "shape": "dot", "size": 10}, {"chassis": "7750 SR-7", "cluster": "lbg_ccd", "color": "silver", "id": "ME-D3-CLL", "label": "ME-D3-CLL", "shape": "dot", "size": 10}, {"chassis": "7750 SR-7", "cluster": "lbg_ccd", "color": "green", "id": "ME-D3-PDL", "label": "ME-D3-PDL", "shape": "dot", "size": 10}, {"chassis": "7750 SR-7", "cluster": "lbg_ccd", "color": "silver", "id": "ME-D3-NJG", "label": "ME-D3-NJG", "shape": "dot", "size": 10}, {"chassis": "7750 SR-a8", "cluster": "lbg_ccd", "color": "silver", "id": "ME-D3-CJG", "label": "ME-D3-CJG", "shape": "dot", "size": 10}, {"chassis": "7750 SR-7", "cluster": "lbg_ccd", "color": "green", "id": "ME-D3-KPO", "label": "ME-D3-KPO", "shape": "dot", "size": 10}, {"chassis": "7750 SR-7", "cluster": "lbg_ccd", "color": "silver", "id": "ME-D3-SDA", "label": "ME-D3-SDA", "shape": "dot", "size": 10}, {"chassis": "7750 SR-7", "cluster": "lbg_ccd", "color": "silver", "id": "ME-D3-SOR", "label": "ME-D3-SOR", "shape": "dot", "size": 10}, {"chassis": "7450 ESS-6", "cluster": "lbg_ccd", "color": "green", "id": "ME-D3-CBB", "label": "ME-D3-CBB", "shape": "dot", "size": 10}, {"chassis": "7450 ESS-6", "cluster": "lbg_ccd", "color": "silver", "id": "ME-D3-SGA", "label": "ME-D3-SGA", "shape": "dot", "size": 10}, {"chassis": "7750 SR-7", "cluster": "lbg_ccd", "color": "green", "id": "ME-D3-CKB", "label": "ME-D3-CKB", "shape": "dot", "size": 10}, {"chassis": "7750 SR-7", "cluster": "lbg_ccd", "color": "green", "id": "ME-D3-CMK", "label": "ME-D3-CMK", "shape": "dot", "size": 10}, {"chassis": "7750 SR-a8", "cluster": "lbg_ccd", "color": "green", "id": "ME-D3-PLR", "label": "ME-D3-PLR", "shape": "dot", "size": 10}, {"chassis": "7750 SR-7", "cluster": "lbg_ccd", "color": "silver", "id": "ME-D3-TGN", "label": "ME-D3-TGN", "shape": "dot", "size": 10}, {"chassis": "7750 SR-7", "cluster": "lbg_ccd", "color": "silver", "id": "ME-D3-CBD", "label": "ME-D3-CBD", "shape": "dot", "size": 10}, {"chassis": "7750 SR-7", "cluster": "lbg_ccd", "color": "silver", "id": "ME-D3-CCR", "label": "ME-D3-CCR", "shape": "dot", "size": 10}, {"chassis": "7750 SR-7", "cluster": "lbg_ccd", "color": "silver", "id": "ME-D3-SGN", "label": "ME-D3-SGN", "shape": "dot", "size": 10}, {"chassis": "0", "cluster": "cbn_tsm", "color": "silver", "id": "ME-B-JWB-KAL", "label": "ME-B-JWB-KAL", "shape": "dot", "size": 10}, {"chassis": "7450 ESS-6", "cluster": "cbn_tsm", "color": "silver", "id": "ME-D3-KAL", "label": "ME-D3-KAL", "shape": "dot", "size": 10}, {"chassis": "7750 SR-a8", "cluster": "cbn_tsm", "color": "silver", "id": "ME-D3-CPH", "label": "ME-D3-CPH", "shape": "dot", "size": 10}, {"chassis": "7750 SR-7", "cluster": "cbn_tsm", "color": "silver", "id": "ME-D3-CKJ", "label": "ME-D3-CKJ", "shape": "dot", "size": 10}, {"chassis": "7750 SR-7", "cluster": "cbn_tsm", "color": "silver", "id": "ME-D3-RJP", "label": "ME-D3-RJP", "shape": "dot", "size": 10}, {"chassis": "7750 SR-7", "cluster": "cbn_tsm", "color": "silver", "id": "ME-D3-CBT", "label": "ME-D3-CBT", "shape": "dot", "size": 10}, {"chassis": "7750 SR-7", "cluster": "cbn_tsm", "color": "silver", "id": "ME-D3-KDA", "label": "ME-D3-KDA", "shape": "dot", "size": 10}, {"chassis": "7750 SR-7", "cluster": "cbn_tsm", "color": "silver", "id": "ME-D3-WNR", "label": "ME-D3-WNR", "shape": "dot", "size": 10}, {"chassis": "7750 SR-7", "cluster": "cbn_tsm", "color": "silver", "id": "ME-D3-CIW", "label": "ME-D3-CIW", "shape": "dot", "size": 10}, {"chassis": "7750 SR-a8", "cluster": "lbg_ccd", "color": "silver", "id": "ME-D3-CCD-RR", "label": "ME-D3-CCD-RR", "shape": "dot", "size": 10}, {"chassis": "0", "cluster": "lbg_ccd", "color": "silver", "id": "ME2-D3-CCD-1", "label": "ME2-D3-CCD-1", "shape": "dot", "size": 10}, {"chassis": "0", "cluster": "lbg_ccd", "color": "silver", "id": "ME2-D3-CCD-2", "label": "ME2-D3-CCD-2", "shape": "dot", "size": 10}, {"chassis": "7750 SR-a8", "cluster": "lbg_ccd", "color": "silver", "id": "ME-D3-KPN", "label": "ME-D3-KPN", "shape": "dot", "size": 10}, {"chassis": "7750 SR-7", "cluster": "cbn_tsm", "color": "green", "id": "ME-D3-KNG", "label": "ME-D3-KNG", "shape": "dot", "size": 10}, {"chassis": "7750 SR-12", "cluster": "lbg_ccd", "color": "green", "id": "ME-D3-CJA", "label": "ME-D3-CJA", "shape": "dot", "size": 10}, {"chassis": "7750 SR-7", "cluster": "lbg_ccd", "color": "green", "id": "ME-D3-TGG", "label": "ME-D3-TGG", "shape": "dot", "size": 10}, {"chassis": "0", "cluster": "lbg_ccd", "color": "silver", "id": "ME-HRB-JWB-NISP", "label": "ME-HRB-JWB-NISP", "shape": "dot", "size": 10}, {"chassis": "7750 SR-7", "cluster": "lbg_ccd", "color": "green", "id": "ME-D3-CMI", "label": "ME-D3-CMI", "shape": "dot", "size": 10}, {"chassis": "7750 SR-7", "cluster": "lbg_ccd", "color": "silver", "id": "ME-D3-DGO", "label": "ME-D3-DGO", "shape": "dot", "size": 10}, {"chassis": "7450 ESS-6", "cluster": "lbg_ccd", "color": "silver", "id": "ME-D3-JPT", "label": "ME-D3-JPT", "shape": "dot", "size": 10}, {"chassis": "7750 SR-7", "cluster": "lbg_ccd", "color": "silver", "id": "ME-D3-SMD", "label": "ME-D3-SMD", "shape": "dot", "size": 10}, {"chassis": "7750 SR-7", "cluster": "lbg_ccd", "color": "silver", "id": "ME-D3-TGA", "label": "ME-D3-TGA", "shape": "dot", "size": 10}, {"chassis": "7750 SR-12", "cluster": "lbg_ccd", "color": "green", "id": "ME-D3-UBR", "label": "ME-D3-UBR", "shape": "dot", "size": 10}, {"chassis": "7750 SR-12", "cluster": "lbg_ccd", "color": "silver", "id": "ME2-D3-CCD", "label": "ME2-D3-CCD", "shape": "dot", "size": 10}, {"chassis": "7750 SR-12", "cluster": "lbg_ccd", "color": "silver", "id": "ME3-D3-LBG", "label": "ME3-D3-LBG", "shape": "dot", "size": 10}, {"chassis": "0", "cluster": "lbg_ccd", "color": "silver", "id": "ME-B-JWB-JPT", "label": "ME-B-JWB-JPT", "shape": "dot", "size": 10}, {"chassis": "7450 ESS-6", "cluster": "lbg_ccd", "color": "green", "id": "ME-D3-CPT", "label": "ME-D3-CPT", "shape": "dot", "size": 10}, {"chassis": "7750 SR-7", "cluster": "cbn_tsm", "color": "silver", "id": "ME-D3-CKG", "label": "ME-D3-CKG", "shape": "dot", "size": 10}, {"chassis": "7750 SR-7", "cluster": "cbn_tsm", "color": "silver", "id": "ME-D3-PMP", "label": "ME-D3-PMP", "shape": "dot", "size": 10}, {"chassis": "7750 SR-7", "cluster": "cbn_tsm", "color": "silver", "id": "ME-D3-MJL", "label": "ME-D3-MJL", "shape": "dot", "size": 10}, {"chassis": "7750 SR-7", "cluster": "cbn_tsm", "color": "silver", "id": "ME-D3-CLM", "label": "ME-D3-CLM", "shape": "dot", "size": 10}, {"chassis": "7750 SR-7", "cluster": "cbn_tsm", "color": "silver", "id": "ME-D3-KAD", "label": "ME-D3-KAD", "shape": "dot", "size": 10}, {"chassis": "7750 SR-7", "cluster": "lbg_ccd", "color": "silver", "id": "ME-D3-CKK", "label": "ME-D3-CKK", "shape": "dot", "size": 10}, {"chassis": "7750 SR-7", "cluster": "lbg_ccd", "color": "green", "id": "ME-D3-CKW", "label": "ME-D3-CKW", "shape": "dot", "size": 10}, {"chassis": "7750 SR-a8", "cluster": "lbg_ccd", "color": "silver", "id": "ME-D3-SKI", "label": "ME-D3-SKI", "shape": "dot", "size": 10}, {"chassis": "7750 SR-a8", "cluster": "cbn_tsm", "color": "silver", "id": "ME-D3-CKL", "label": "ME-D3-CKL", "shape": "dot", "size": 10}, {"chassis": "7750 SR-7", "cluster": "lbg_ccd", "color": "silver", "id": "ME-D3-CWD", "label": "ME-D3-CWD", "shape": "dot", "size": 10}, {"chassis": "7750 SR-7", "cluster": "cbn_tsm", "color": "silver", "id": "ME-D3-JTW", "label": "ME-D3-JTW", "shape": "dot", "size": 10}, {"chassis": "7750 SR-7", "cluster": "cbn_tsm", "color": "silver", "id": "ME-D3-SDU", "label": "ME-D3-SDU", "shape": "dot", "size": 10}, {"chassis": "0", "cluster": "cbn_tsm", "color": "green", "id": "ME3-A-JWB-CBN", "label": "ME3-A-JWB-CBN", "shape": "dot", "size": 10}, {"chassis": "7750 SR-12", "cluster": "lbg_ccd", "color": "green", "id": "ME-D3-RJW", "label": "ME-D3-RJW", "shape": "dot", "size": 10}, {"chassis": "7750 SR-7", "cluster": "lbg_ccd", "color": "silver", "id": "ME-D3-SUB", "label": "ME-D3-SUB", "shape": "dot", "size": 10}, {"chassis": "7750 SR-7", "cluster": "cbn_tsm", "color": "silver", "id": "ME-D3-CSM", "label": "ME-D3-CSM", "shape": "dot", "size": 10}, {"chassis": "7750 SR-7", "cluster": "lbg_ccd", "color": "silver", "id": "ME-D3-PAU", "label": "ME-D3-PAU", "shape": "dot", "size": 10}, {"chassis": "7750 SR-7", "cluster": "cbn_tsm", "color": "silver", "id": "ME-D3-PMN", "label": "ME-D3-PMN", "shape": "dot", "size": 10}, {"chassis": "7750 SR-7", "cluster": "lbg_ccd", "color": "silver", "id": "ME-D3-KLJ", "label": "ME-D3-KLJ", "shape": "dot", "size": 10}, {"chassis": "7750 SR-7", "cluster": "lbg_ccd", "color": "silver", "id": "ME-D3-HGM", "label": "ME-D3-HGM", "shape": "dot", "size": 10}, {"chassis": "0", "cluster": "lbg_ccd", "color": "silver", "id": "ME-HRB-JWB-RNC-TSEL", "label": "ME-HRB-JWB-RNC-TSEL", "shape": "dot", "size": 10}, {"chassis": "7450 ESS-6", "cluster": "lbg_ccd", "color": "silver", "id": "ME-D3-TSEL-DGO", "label": "ME-D3-TSEL-DGO", "shape": "dot", "size": 10}, {"chassis": "7750 SR-7", "cluster": "cbn_tsm", "color": "silver", "id": "ME-D3-HAR", "label": "ME-D3-HAR", "shape": "dot", "size": 10}, {"chassis": "7750 SR-7", "cluster": "lbg_ccd", "color": "silver", "id": "ME-D3-PGD", "label": "ME-D3-PGD", "shape": "dot", "size": 10}, {"chassis": "7750 SR-7", "cluster": "lbg_ccd", "color": "silver", "id": "ME4-D3-LBG", "label": "ME4-D3-LBG", "shape": "dot", "size": 10}, {"chassis": "0", "cluster": "lbg_ccd", "color": "silver", "id": "ME4-A-JWB-SNT", "label": "ME4-A-JWB-SNT", "shape": "dot", "size": 10}, {"chassis": "7450 ESS-6", "cluster": "lbg_ccd", "color": "silver", "id": "ME-D3-HRB-NISP", "label": "ME-D3-HRB-NISP", "shape": "dot", "size": 10}, {"chassis": "0", "cluster": "lbg_ccd", "color": "silver", "id": "ME-A-JWB-TGG", "label": "ME-A-JWB-TGG", "shape": "dot", "size": 10}, {"chassis": "0", "cluster": "lbg_ccd", "color": "silver", "id": "ME-D3-LBG", "label": "ME-D3-LBG", "shape": "dot", "size": 10}, {"chassis": "0", "cluster": "cbn_tsm", "color": "silver", "id": "ME-A-JWB-SMD", "label": "ME-A-JWB-SMD", "shape": "dot", "size": 10}, {"chassis": "7750 SR-a8", "cluster": "cbn_tsm", "color": "silver", "id": "ME-D3-KCI", "label": "ME-D3-KCI", "shape": "dot", "size": 10}, {"chassis": "0", "cluster": "cbn_tsm", "color": "silver", "id": "ME-B-JWB-LOS", "label": "ME-B-JWB-LOS", "shape": "dot", "size": 10}, {"chassis": "7750 SR-7", "cluster": "cbn_tsm", "color": "silver", "id": "ME-D3-LOS", "label": "ME-D3-LOS", "shape": "dot", "size": 10}, {"chassis": "7750 SR-a8", "cluster": "lbg_ccd", "color": "silver", "id": "ME-D3-LBG-RR", "label": "ME-D3-LBG-RR", "shape": "dot", "size": 10}, {"chassis": "7750 SR-7", "cluster": "cbn_tsm", "color": "silver", "id": "ME-D3-PAB", "label": "ME-D3-PAB", "shape": "dot", "size": 10}, {"chassis": "7750 SR-7", "cluster": "lbg_ccd", "color": "silver", "id": "ME-D3-TTC", "label": "ME-D3-TTC", "shape": "dot", "size": 10}, {"chassis": "0", "cluster": "lbg_ccd", "color": "silver", "id": "ME-B-JKT-TTC", "label": "ME-B-JKT-TTC", "shape": "dot", "size": 10}, {"chassis": "0", "cluster": "lbg_ccd", "color": "silver", "id": "ME-D3-CCD-RR-1", "label": "ME-D3-CCD-RR-1", "shape": "dot", "size": 10}, {"chassis": "0", "cluster": "lbg_ccd", "color": "silver", "id": "ME-D3-CCD-RR-2", "label": "ME-D3-CCD-RR-2", "shape": "dot", "size": 10}, {"chassis": "7450 ESS-6", "cluster": "lbg_ccd", "color": "silver", "id": "ME2-D3-TTC", "label": "ME2-D3-TTC", "shape": "dot", "size": 10}, {"chassis": "0", "cluster": "lbg_ccd", "color": "silver", "id": "ME-A-JWB-GGK_2", "label": "ME-A-JWB-GGK_2", "shape": "dot", "size": 10}, {"chassis": "0", "cluster": "lbg_ccd", "color": "silver", "id": "TO_7750", "label": "TO_7750", "shape": "dot", "size": 10}, {"chassis": "7750 SR-7", "cluster": "lbg_ccd", "color": "silver", "id": "ME3-D3-RDC", "label": "ME3-D3-RDC", "shape": "dot", "size": 10}, {"chassis": "0", "cluster": "lbg_ccd", "color": "silver", "id": "ME-A-JWB-GGK", "label": "ME-A-JWB-GGK", "shape": "dot", "size": 10}, {"chassis": "0", "cluster": "lbg_ccd", "color": "silver", "id": "ME-A-JWB-RDC-LINK2", "label": "ME-A-JWB-RDC-LINK2", "shape": "dot", "size": 10}]);
+                  edges = new vis.DataSet([{"color": "green", "from": "ME9-D2-BKS", "hi_occ": 0.0, "k_idle": "bl 50", "label": "4.6", "to": "ME-D2-CBU", "width": 2}, {"color": "green", "from": "ME9-D2-BKS", "hi_occ": 0.0, "k_idle": "100 Up", "label": "63.2", "to": "ME-D2-CKP", "width": 2}, {"color": "green", "from": "ME9-D2-BKS", "hi_occ": 0.0, "k_idle": "bl 50", "label": "9.5", "to": "ME-D2-CPL", "width": 2}, {"color": "green", "from": "ME9-D2-BKS", "hi_occ": 0.0, "k_idle": "50 sd 100", "label": "27.3", "to": "ME-D2-PWK", "width": 2}, {"color": "green", "from": "ME9-D2-BKS", "hi_occ": 0.0, "k_idle": "bl 50", "label": "6.2", "to": "ME-D2-RDK", "width": 2}, {"color": "green", "from": "ME9-D2-BKS", "hi_occ": 0.0, "k_idle": "bl 50", "label": "10.0", "to": "ME-D3-PLD", "width": 2}, {"color": "green", "from": "ME9-D2-BKS", "hi_occ": 0.0, "k_idle": "bl 50", "label": "10.1", "to": "ME-D2-PLD", "width": 2}, {"color": "green", "from": "ME-D2-CBU", "hi_occ": 0.0, "k_idle": "bl 50", "label": "4.7", "to": "ME9-D2-JT", "width": 2}, {"color": "green", "from": "ME-D2-CKP", "hi_occ": 0.0, "k_idle": "bl 50", "label": "13.5", "to": "ME-D2-JTS", "width": 2}, {"color": "green", "from": "ME-D2-CKP", "hi_occ": 0.0, "k_idle": "50 sd 100", "label": "9.5", "to": "ME-D2-KRW", "width": 2}, {"color": "green", "from": "ME-D2-CPL", "hi_occ": 0.0, "k_idle": "bl 50", "label": "7.5", "to": "ME-D2-TLJ", "width": 2}, {"color": "green", "from": "ME-D2-PWK", "hi_occ": 0.0, "k_idle": "50 sd 100", "label": "37.7", "to": "ME9-D2-JT", "width": 2}, {"color": "green", "from": "ME-D2-RDK", "hi_occ": 0.0, "k_idle": "bl 50", "label": "18.6", "to": "ME9-D2-JT", "width": 2}, {"color": "green", "from": "ME-D3-PLD", "hi_occ": 0.0, "k_idle": "bl 50", "label": "3.3", "to": "ME9-D2-JT", "width": 2}, {"color": "green", "from": "ME-D3-PLD", "hi_occ": 0.0, "k_idle": "bl 50", "label": "22.2", "to": "ME-D3-JBL", "width": 2}, {"color": "green", "from": "ME-D3-PLD", "hi_occ": 0.0, "k_idle": "bl 50", "label": "6.0", "to": "ME-D3-KYA", "width": 2}, {"color": "green", "from": "ME-D3-PLD", "hi_occ": 0.0, "k_idle": "bl 50", "label": "44.7", "to": "ME9-D3-CBN", "width": 2}, {"color": "green", "from": "ME9-D2-JT", "hi_occ": 0.0, "k_idle": "100 Up", "label": "89.6", "to": "ME-D2-KRW", "width": 2}, {"color": "green", "from": "ME9-D2-JT", "hi_occ": 0.0, "k_idle": "bl 50", "label": "26.2", "to": "ME-D2-TLJ", "width": 2}, {"color": "green", "from": "ME9-D2-JT", "hi_occ": 0.0, "k_idle": "bl 50", "label": "2.9", "to": "ME-D2-PLD", "width": 2}, {"color": "green", "from": "ME-D2-KRW", "hi_occ": 0.0, "k_idle": "bl 50", "label": "59.3", "to": "ME-D2-KLI", "width": 2}, {"color": "green", "from": "ME-A-JWB-RDC", "hi_occ": 0.0, "k_idle": "bl 50", "label": "1.2", "to": "ME-D3-GGK", "width": 2}, {"color": "black", "from": "ME-A-JWB-RDC", "hi_occ": 0.0, "k_idle": "bl 50", "label": "0.0", "to": "ME3-A-JWB-RDC", "width": 3}, {"color": "green", "from": "ME-D3-GGK", "hi_occ": 0.0, "k_idle": "bl 50", "label": "1.1", "to": "ME-D3-CSA", "width": 2}, {"color": "green", "from": "ME-D3-GGK", "hi_occ": 0.0, "k_idle": "bl 50", "label": "0.0", "to": "ME-B-JWB-TTC", "width": 2}, {"color": "green", "from": "ME-D3-GGK", "hi_occ": 0.0, "k_idle": "bl 50", "label": "13.0", "to": "ME-D3-JCG", "width": 2}, {"color": "green", "from": "ME-D3-GGK", "hi_occ": 0.0, "k_idle": "100 Up", "label": "7.2", "to": "ME-D3-LEM", "width": 2}, {"color": "green", "from": "ME-D3-GGK", "hi_occ": 0.0, "k_idle": "bl 50", "label": "1.2", "to": "ME3-A-JWB-RDC", "width": 2}, {"color": "green", "from": "ME-D3-GGK", "hi_occ": 0.0, "k_idle": "100 Up", "label": "59.0", "to": "ME9-D3-CCD", "width": 2}, {"color": "green", "from": "ME-D2-JTS", "hi_occ": 0.0, "k_idle": "bl 50", "label": "7.9", "to": "ME-D2-KLI", "width": 2}, {"color": "green", "from": "ME-D3-AWN", "hi_occ": 0.0, "k_idle": "bl 50", "label": "9.7", "to": "ME-D3-JBL", "width": 2}, {"color": "green", "from": "ME-D3-AWN", "hi_occ": 0.0, "k_idle": "bl 50", "label": "0.4", "to": "ME-D3-JTB", "width": 2}, {"color": "green", "from": "ME-D3-JBL", "hi_occ": 0.0, "k_idle": "bl 50", "label": "19.1", "to": "ME-D3-RGA", "width": 2}, {"color": "green", "from": "ME-D3-JTB", "hi_occ": 0.0, "k_idle": "bl 50", "label": "9.4", "to": "ME-D3-IMY", "width": 2}, {"color": "green", "from": "ME-D3-JTB", "hi_occ": 0.0, "k_idle": "bl 50", "label": "12.0", "to": "ME9-D3-CBN", "width": 2}, {"color": "green", "from": "ME-D3-BJL", "hi_occ": 0.0, "k_idle": "bl 50", "label": "2.5", "to": "ME-D3-JPK", "width": 2}, {"color": "green", "from": "ME-D3-BJL", "hi_occ": 0.0, "k_idle": "bl 50", "label": "1.1", "to": "ME-D3-NLD", "width": 2}, {"color": "green", "from": "ME-D3-JPK", "hi_occ": 0.0, "k_idle": "bl 50", "label": "15.7", "to": "ME-D3-SKB", "width": 2}, {"color": "green", "from": "ME-D3-NLD", "hi_occ": 0.0, "k_idle": "100 Up", "label": "1.1", "to": "ME-D3-CJR", "width": 2}, {"color": "green", "from": "ME-D3-BJN", "hi_occ": 0.0, "k_idle": "100 Up", "label": "63.3", "to": "ME-D3-MJA", "width": 2}, {"color": "green", "from": "ME-D3-BJN", "hi_occ": 0.0, "k_idle": "bl 50", "label": "9.2", "to": "ME-D3-PLN", "width": 2}, {"color": "green", "from": "ME-D3-BJN", "hi_occ": 0.0, "k_idle": "100 Up", "label": "31.9", "to": "ME-D3-RCK", "width": 2}, {"color": "green", "from": "ME-D3-MJA", "hi_occ": 0.0, "k_idle": "bl 50", "label": "7.4", "to": "ME-D3-PLN", "width": 2}, {"color": "red", "from": "ME-D3-MJA", "hi_occ": 18.0, "k_idle": "bl 50", "label": "160.9", "to": "ME9-D3-LBG", "width": 3}, {"color": "green", "from": "ME-D3-RCK", "hi_occ": 0.0, "k_idle": "bl 50", "label": "20.5", "to": "ME-D3-CLK", "width": 2}, {"color": "black", "from": "ME-D3-RCK", "hi_occ": 0.0, "k_idle": "bl 50", "label": "0.0", "to": "ME-D3-GRT", "width": 3}, {"color": "green", "from": "ME-D3-RCK", "hi_occ": 0.0, "k_idle": "bl 50", "label": "4.0", "to": "ME-D3-LAG", "width": 2}, {"color": "green", "from": "ME-D3-RCK", "hi_occ": 0.0, "k_idle": "bl 50", "label": "5.2", "to": "ME-D3-TAS", "width": 2}, {"color": "green", "from": "ME-D3-RCK", "hi_occ": 0.0, "k_idle": "100 Up", "label": "60.7", "to": "ME9-D3-CCD", "width": 2}, {"color": "green", "from": "ME-D3-BJR", "hi_occ": 0.0, "k_idle": "bl 50", "label": "19.7", "to": "ME-D3-BJS", "width": 2}, {"color": "green", "from": "ME-D3-BJR", "hi_occ": 0.0, "k_idle": "bl 50", "label": "69.7", "to": "ME-D3-CMS", "width": 2}, {"color": "green", "from": "ME-D3-BJR", "hi_occ": 0.0, "k_idle": "bl 50", "label": "0.9", "to": "ME-D3-MON", "width": 2}, {"color": "green", "from": "ME-D3-BJR", "hi_occ": 0.0, "k_idle": "bl 50", "label": "26.5", "to": "ME-D3-PGN", "width": 2}, {"color": "green", "from": "ME-D3-BJR", "hi_occ": 0.0, "k_idle": "bl 50", "label": "1.0", "to": "ME-D3-TSM", "width": 2}, {"color": "green", "from": "ME-D3-BJS", "hi_occ": 0.0, "k_idle": "bl 50", "label": "0.5", "to": "ME-D3-PGN", "width": 2}, {"color": "green", "from": "ME-D3-CMS", "hi_occ": 0.0, "k_idle": "bl 50", "label": "4.0", "to": "ME-D3-KAW", "width": 2}, {"color": "green", "from": "ME-D3-CMS", "hi_occ": 0.0, "k_idle": "50 sd 100", "label": "109.7", "to": "ME9-D3-TSM", "width": 2}, {"color": "green", "from": "ME-D3-MON", "hi_occ": 0.0, "k_idle": "bl 50", "label": "12.5", "to": "ME-D3-TSM", "width": 2}, {"color": "green", "from": "ME-D3-PGN", "hi_occ": 0.0, "k_idle": "bl 50", "label": "8.4", "to": "ME-D3-PRG", "width": 2}, {"color": "green", "from": "ME-D3-TSM", "hi_occ": 0.0, "k_idle": "50 sd 100", "label": "18.8", "to": "ME-D3-CBL", "width": 2}, {"color": "green", "from": "ME-D3-TSM", "hi_occ": 0.0, "k_idle": "bl 50", "label": "24.2", "to": "ME-D3-MLO", "width": 2}, {"color": "green", "from": "ME-D3-TSM", "hi_occ": 0.0, "k_idle": "bl 50", "label": "38.3", "to": "ME-D3-SPA", "width": 2}, {"color": "green", "from": "ME-D3-TSM", "hi_occ": 0.0, "k_idle": "100 Up", "label": "168.5", "to": "ME9-D3-TSM", "width": 2}, {"color": "green", "from": "ME-D3-BON", "hi_occ": 0.0, "k_idle": "bl 50", "label": "7.4", "to": "ME-D3-IMY", "width": 2}, {"color": "green", "from": "ME-D3-BON", "hi_occ": 0.0, "k_idle": "bl 50", "label": "0.2", "to": "ME-D3-KRL", "width": 2}, {"color": "green", "from": "ME-D3-IMY", "hi_occ": 0.0, "k_idle": "bl 50", "label": "13.1", "to": "ME-D3-LSR", "width": 2}, {"color": "green", "from": "ME-D3-IMY", "hi_occ": 0.0, "k_idle": "bl 50", "label": "54.2", "to": "ME-D3-PAT", "width": 2}, {"color": "green", "from": "ME-D3-IMY", "hi_occ": 0.0, "k_idle": "50 sd 100", "label": "115.4", "to": "ME9-D3-CBN", "width": 2}, {"color": "black", "from": "ME-D3-KRL", "hi_occ": 0.0, "k_idle": "bl 50", "label": "0.0", "to": "ME3-D3-CBN", "width": 3}, {"color": "green", "from": "ME-D3-KRL", "hi_occ": 0.0, "k_idle": "bl 50", "label": "19.0", "to": "ME9-D3-CBN", "width": 2}, {"color": "green", "from": "ME-D3-BTJ", "hi_occ": 0.0, "k_idle": "50 sd 100", "label": "10.0", "to": "ME-D3-CLL", "width": 2}, {"color": "green", "from": "ME-D3-BTJ", "hi_occ": 0.0, "k_idle": "100 Up", "label": "36.1", "to": "ME-D3-PDL", "width": 2}, {"color": "green", "from": "ME-D3-CLL", "hi_occ": 0.0, "k_idle": "50 sd 100", "label": "10.0", "to": "ME-D3-NJG", "width": 2}, {"color": "green", "from": "ME-D3-PDL", "hi_occ": 0.0, "k_idle": "bl 50", "label": "24.6", "to": "ME-D3-CJG", "width": 2}, {"color": "green", "from": "ME-D3-PDL", "hi_occ": 0.0, "k_idle": "50 sd 100", "label": "23.1", "to": "ME-D3-KPO", "width": 2}, {"color": "green", "from": "ME-D3-PDL", "hi_occ": 0.0, "k_idle": "bl 50", "label": "28.6", "to": "ME-D3-SDA", "width": 2}, {"color": "green", "from": "ME-D3-PDL", "hi_occ": 0.0, "k_idle": "50 sd 100", "label": "29.0", "to": "ME-D3-SOR", "width": 2}, {"color": "green", "from": "ME-D3-PDL", "hi_occ": 0.0, "k_idle": "100 Up", "label": "144.0", "to": "ME9-D3-LBG", "width": 2}, {"color": "green", "from": "ME-D3-CBB", "hi_occ": 0.0, "k_idle": "100 Up", "label": "10.6", "to": "ME-D3-CJR", "width": 2}, {"color": "green", "from": "ME-D3-CBB", "hi_occ": 0.0, "k_idle": "bl 50", "label": "3.4", "to": "ME-D3-SGA", "width": 2}, {"color": "green", "from": "ME-D3-CJR", "hi_occ": 0.0, "k_idle": "100 Up", "label": "3.0", "to": "ME-D3-CKB", "width": 2}, {"color": "green", "from": "ME-D3-CJR", "hi_occ": 0.0, "k_idle": "100 Up", "label": "8.5", "to": "ME-D3-CMK", "width": 2}, {"color": "green", "from": "ME-D3-CJR", "hi_occ": 0.0, "k_idle": "100 Up", "label": "16.9", "to": "ME-D3-PLR", "width": 2}, {"color": "green", "from": "ME-D3-CJR", "hi_occ": 0.0, "k_idle": "50 sd 100", "label": "21.9", "to": "ME-D3-SKB", "width": 2}, {"color": "green", "from": "ME-D3-CJR", "hi_occ": 0.0, "k_idle": "100 Up", "label": "85.6", "to": "ME9-D3-CCD", "width": 2}, {"color": "green", "from": "ME-D3-SGA", "hi_occ": 0.0, "k_idle": "bl 50", "label": "5.6", "to": "ME-D3-TGN", "width": 2}, {"color": "green", "from": "ME-D3-CBD", "hi_occ": 0.0, "k_idle": "bl 50", "label": "6.2", "to": "ME-D3-CKB", "width": 2}, {"color": "green", "from": "ME-D3-CBD", "hi_occ": 0.0, "k_idle": "bl 50", "label": "31.8", "to": "ME-D3-SKB", "width": 2}, {"color": "green", "from": "ME-D3-SKB", "hi_occ": 0.0, "k_idle": "bl 50", "label": "36.7", "to": "ME-D3-CCR", "width": 2}, {"color": "green", "from": "ME-D3-SKB", "hi_occ": 0.0, "k_idle": "bl 50", "label": "0.1", "to": "ME-D3-CMK", "width": 2}, {"color": "green", "from": "ME-D3-SKB", "hi_occ": 0.0, "k_idle": "bl 50", "label": "24.9", "to": "ME-D3-SGN", "width": 2}, {"color": "red", "from": "ME-D3-SKB", "hi_occ": 15.0, "k_idle": "bl 50", "label": "177.1", "to": "ME9-D3-LBG", "width": 3}, {"color": "green", "from": "ME-D3-CBL", "hi_occ": 0.0, "k_idle": "bl 50", "label": "10.9", "to": "ME-B-JWB-KAL", "width": 2}, {"color": "black", "from": "ME-D3-CBL", "hi_occ": 0.0, "k_idle": "bl 50", "label": "0.0", "to": "ME9-D3-TSM", "width": 3}, {"color": "green", "from": "ME-D3-CBL", "hi_occ": 0.0, "k_idle": "bl 50", "label": "10.9", "to": "ME-D3-KAL", "width": 2}, {"color": "green", "from": "ME-B-JWB-KAL", "hi_occ": 0.0, "k_idle": "bl 50", "label": "14.6", "to": "ME-D3-CPH", "width": 2}, {"color": "green", "from": "ME9-D3-TSM", "hi_occ": 0.0, "k_idle": "bl 50", "label": "44.1", "to": "ME-D3-CKJ", "width": 2}, {"color": "green", "from": "ME9-D3-TSM", "hi_occ": 0.0, "k_idle": "50 sd 100", "label": "125.9", "to": "ME-D3-GRT", "width": 2}, {"color": "green", "from": "ME9-D3-TSM", "hi_occ": 0.0, "k_idle": "bl 50", "label": "9.9", "to": "ME-D3-KAW", "width": 2}, {"color": "green", "from": "ME9-D3-TSM", "hi_occ": 0.0, "k_idle": "bl 50", "label": "30.4", "to": "ME-D3-RJP", "width": 2}, {"color": "green", "from": "ME9-D3-TSM", "hi_occ": 0.0, "k_idle": "100 Up", "label": "169.2", "to": "ME9-D3-CBN", "width": 2}, {"color": "green", "from": "ME9-D3-TSM", "hi_occ": 0.0, "k_idle": "bl 50", "label": "37.4", "to": "ME9-D3-LBG", "width": 2}, {"color": "black", "from": "ME-D3-CBT", "hi_occ": 0.0, "k_idle": "bl 50", "label": "0.0", "to": "ME-D3-KDA", "width": 3}, {"color": "green", "from": "ME-D3-CBT", "hi_occ": 0.0, "k_idle": "bl 50", "label": "0.4", "to": "ME-D3-LAG", "width": 2}, {"color": "green", "from": "ME-D3-CBT", "hi_occ": 0.0, "k_idle": "bl 50", "label": "5.8", "to": "ME-D3-MLO", "width": 2}, {"color": "green", "from": "ME-D3-CBT", "hi_occ": 0.0, "k_idle": "bl 50", "label": "0.4", "to": "ME-D3-WNR", "width": 2}, {"color": "green", "from": "ME-D3-KDA", "hi_occ": 0.0, "k_idle": "bl 50", "label": "0.3", "to": "ME-D3-CLK", "width": 2}, {"color": "green", "from": "ME-D3-KDA", "hi_occ": 0.0, "k_idle": "bl 50", "label": "13.4", "to": "ME-D3-GRT", "width": 2}, {"color": "green", "from": "ME-D3-LAG", "hi_occ": 0.0, "k_idle": "bl 50", "label": "7.6", "to": "ME-D3-MLO", "width": 2}, {"color": "green", "from": "ME-D3-MLO", "hi_occ": 0.0, "k_idle": "bl 50", "label": "0.4", "to": "ME-D3-CIW", "width": 2}, {"color": "green", "from": "ME-D3-WNR", "hi_occ": 0.0, "k_idle": "bl 50", "label": "14.4", "to": "ME-D3-GRT", "width": 2}, {"color": "black", "from": "ME-D3-CCD-RR", "hi_occ": 0.0, "k_idle": "bl 50", "label": "0.0", "to": "ME2-D3-CCD-1", "width": 3}, {"color": "black", "from": "ME-D3-CCD-RR", "hi_occ": 0.0, "k_idle": "bl 50", "label": "0.0", "to": "ME2-D3-CCD-2", "width": 3}, {"color": "green", "from": "ME-D3-CCR", "hi_occ": 0.0, "k_idle": "bl 50", "label": "13.3", "to": "ME-D3-KPN", "width": 2}, {"color": "green", "from": "ME-D3-KPN", "hi_occ": 0.0, "k_idle": "bl 50", "label": "2.8", "to": "ME-D3-PLR", "width": 2}, {"color": "green", "from": "ME-D3-CIW", "hi_occ": 0.0, "k_idle": "bl 50", "label": "0.0", "to": "ME-D3-KAW", "width": 2}, {"color": "green", "from": "ME-D3-CIW", "hi_occ": 0.0, "k_idle": "50 sd 100", "label": "16.0", "to": "ME-D3-RJP", "width": 2}, {"color": "green", "from": "ME-D3-KAW", "hi_occ": 0.0, "k_idle": "bl 50", "label": "0.8", "to": "ME-D3-KNG", "width": 2}, {"color": "green", "from": "ME-D3-CJA", "hi_occ": 0.0, "k_idle": "50 sd 100", "label": "2.8", "to": "ME-D3-TGG", "width": 2}, {"color": "green", "from": "ME-D3-CJA", "hi_occ": 0.0, "k_idle": "100 Up", "label": "72.5", "to": "ME9-D3-CCD", "width": 2}, {"color": "black", "from": "ME-D3-TGG", "hi_occ": 0.0, "k_idle": "bl 50", "label": "0.0", "to": "ME-HRB-JWB-NISP", "width": 3}, {"color": "green", "from": "ME-D3-TGG", "hi_occ": 0.0, "k_idle": "100 Up", "label": "41.3", "to": "ME9-D3-LBG", "width": 2}, {"color": "green", "from": "ME9-D3-CCD", "hi_occ": 0.0, "k_idle": "100 Up", "label": "98.7", "to": "ME-D3-CMI", "width": 2}, {"color": "green", "from": "ME9-D3-CCD", "hi_occ": 0.0, "k_idle": "50 sd 100", "label": "43.0", "to": "ME-D3-DGO", "width": 2}, {"color": "black", "from": "ME9-D3-CCD", "hi_occ": 0.0, "k_idle": "bl 50", "label": "0.0", "to": "ME-D3-JPT", "width": 3}, {"color": "green", "from": "ME9-D3-CCD", "hi_occ": 0.0, "k_idle": "100 Up", "label": "109.9", "to": "ME-D3-KPO", "width": 2}, {"color": "green", "from": "ME9-D3-CCD", "hi_occ": 0.0, "k_idle": "50 sd 100", "label": "9.7", "to": "ME-D3-SMD", "width": 2}, {"color": "green", "from": "ME9-D3-CCD", "hi_occ": 0.0, "k_idle": "bl 50", "label": "7.8", "to": "ME-D3-TGA", "width": 2}, {"color": "green", "from": "ME9-D3-CCD", "hi_occ": 0.0, "k_idle": "100 Up", "label": "10.2", "to": "ME-D3-UBR", "width": 2}, {"color": "green", "from": "ME9-D3-CCD", "hi_occ": 0.0, "k_idle": "50 sd 100", "label": "11.3", "to": "ME2-D3-CCD", "width": 2}, {"color": "green", "from": "ME9-D3-CCD", "hi_occ": 0.0, "k_idle": "50 sd 100", "label": "10.0", "to": "ME3-D3-LBG", "width": 2}, {"color": "black", "from": "ME9-D3-CCD", "hi_occ": 0.0, "k_idle": "bl 50", "label": "0.0", "to": "ME-B-JWB-JPT", "width": 3}, {"color": "green", "from": "ME9-D3-CCD", "hi_occ": 0.0, "k_idle": "100 Up", "label": "119.6", "to": "ME9-D3-LBG", "width": 2}, {"color": "green", "from": "ME-D3-CJG", "hi_occ": 0.0, "k_idle": "bl 50", "label": "0.6", "to": "ME-D3-CPT", "width": 2}, {"color": "green", "from": "ME-D3-CPT", "hi_occ": 0.0, "k_idle": "100 Up", "label": "6.9", "to": "ME-D3-KPO", "width": 2}, {"color": "green", "from": "ME-D3-CKG", "hi_occ": 0.0, "k_idle": "bl 50", "label": "34.9", "to": "ME-D3-GRT", "width": 2}, {"color": "green", "from": "ME-D3-CKG", "hi_occ": 0.0, "k_idle": "bl 50", "label": "24.3", "to": "ME-D3-PMP", "width": 2}, {"color": "green", "from": "ME-D3-GRT", "hi_occ": 0.0, "k_idle": "bl 50", "label": "19.7", "to": "ME-D3-PMP", "width": 2}, {"color": "green", "from": "ME-D3-GRT", "hi_occ": 0.0, "k_idle": "bl 50", "label": "10.3", "to": "ME-D3-SPA", "width": 2}, {"color": "green", "from": "ME-D3-PMP", "hi_occ": 0.0, "k_idle": "bl 50", "label": "27.9", "to": "ME-D3-CPH", "width": 2}, {"color": "green", "from": "ME-D3-CKJ", "hi_occ": 0.0, "k_idle": "bl 50", "label": "0.2", "to": "ME-D3-KNG", "width": 2}, {"color": "green", "from": "ME-D3-CKJ", "hi_occ": 0.0, "k_idle": "bl 50", "label": "21.5", "to": "ME-D3-MJL", "width": 2}, {"color": "green", "from": "ME-D3-KNG", "hi_occ": 0.0, "k_idle": "bl 50", "label": "9.4", "to": "ME-D3-CLM", "width": 2}, {"color": "green", "from": "ME-D3-KNG", "hi_occ": 0.0, "k_idle": "100 Up", "label": "96.8", "to": "ME9-D3-CBN", "width": 2}, {"color": "green", "from": "ME-D3-MJL", "hi_occ": 0.0, "k_idle": "bl 50", "label": "6.5", "to": "ME-D3-KAD", "width": 2}, {"color": "green", "from": "ME-D3-CKK", "hi_occ": 0.0, "k_idle": "bl 50", "label": "17.2", "to": "ME-D3-CKW", "width": 2}, {"color": "green", "from": "ME-D3-CKK", "hi_occ": 0.0, "k_idle": "bl 50", "label": "1.2", "to": "ME-D3-SKI", "width": 2}, {"color": "green", "from": "ME-D3-CKW", "hi_occ": 0.0, "k_idle": "100 Up", "label": "11.9", "to": "ME-D3-KPO", "width": 2}, {"color": "green", "from": "ME-D3-SKI", "hi_occ": 0.0, "k_idle": "bl 50", "label": "12.8", "to": "ME-D3-SDA", "width": 2}, {"color": "green", "from": "ME-D3-CKL", "hi_occ": 0.0, "k_idle": "bl 50", "label": "30.6", "to": "ME-D3-CPH", "width": 2}, {"color": "green", "from": "ME-D3-CKL", "hi_occ": 0.0, "k_idle": "bl 50", "label": "3.0", "to": "ME-D3-PRG", "width": 2}, {"color": "green", "from": "ME-D3-CPH", "hi_occ": 0.0, "k_idle": "bl 50", "label": "13.8", "to": "ME-D3-KAL", "width": 2}, {"color": "green", "from": "ME-D3-KPO", "hi_occ": 0.0, "k_idle": "50 sd 100", "label": "10.0", "to": "ME-D3-CWD", "width": 2}, {"color": "green", "from": "ME-D3-KPO", "hi_occ": 25.0, "k_idle": "bl 50", "label": "15.2", "to": "ME-D3-NJG", "width": 2}, {"color": "green", "from": "ME-D3-CLM", "hi_occ": 0.0, "k_idle": "bl 50", "label": "9.2", "to": "ME9-D3-CBN", "width": 2}, {"color": "green", "from": "ME9-D3-CBN", "hi_occ": 0.0, "k_idle": "bl 50", "label": "50.4", "to": "ME-D3-JTW", "width": 2}, {"color": "green", "from": "ME9-D3-CBN", "hi_occ": 0.0, "k_idle": "100 Up", "label": "41.4", "to": "ME-D3-KYA", "width": 2}, {"color": "green", "from": "ME9-D3-CBN", "hi_occ": 0.0, "k_idle": "bl 50", "label": "57.7", "to": "ME-D3-SDU", "width": 2}, {"color": "green", "from": "ME9-D3-CBN", "hi_occ": 0.0, "k_idle": "50 sd 100", "label": "100.6", "to": "ME3-D3-CBN", "width": 2}, {"color": "green", "from": "ME9-D3-CBN", "hi_occ": 0.0, "k_idle": "100 Up", "label": "68.0", "to": "ME3-A-JWB-CBN", "width": 2}, {"color": "green", "from": "ME9-D3-CBN", "hi_occ": 0.0, "k_idle": "50 sd 100", "label": "45.7", "to": "ME9-D3-LBG", "width": 2}, {"color": "green", "from": "ME-D3-CMI", "hi_occ": 0.0, "k_idle": "50 sd 100", "label": "15.9", "to": "ME-D3-RJW", "width": 2}, {"color": "green", "from": "ME-D3-RJW", "hi_occ": 0.0, "k_idle": "100 Up", "label": "60.7", "to": "ME9-D3-LBG", "width": 2}, {"color": "green", "from": "ME-D3-CSA", "hi_occ": 0.0, "k_idle": "bl 50", "label": "8.8", "to": "ME-D3-LEM", "width": 2}, {"color": "green", "from": "ME-D3-LEM", "hi_occ": 0.0, "k_idle": "bl 50", "label": "1.1", "to": "ME-D3-JCG", "width": 2}, {"color": "green", "from": "ME-D3-LEM", "hi_occ": 0.0, "k_idle": "50 sd 100", "label": "90.4", "to": "ME-D3-SUB", "width": 2}, {"color": "green", "from": "ME-D3-LEM", "hi_occ": 0.0, "k_idle": "100 Up", "label": "119.9", "to": "ME9-D3-LBG", "width": 2}, {"color": "green", "from": "ME-D3-CSM", "hi_occ": 0.0, "k_idle": "bl 50", "label": "3.5", "to": "ME-D3-PAU", "width": 2}, {"color": "green", "from": "ME-D3-CSM", "hi_occ": 0.0, "k_idle": "bl 50", "label": "5.4", "to": "ME-D3-PMN", "width": 2}, {"color": "green", "from": "ME-D3-PAU", "hi_occ": 0.0, "k_idle": "bl 50", "label": "10.9", "to": "ME-D3-KLJ", "width": 2}, {"color": "green", "from": "ME-D3-PMN", "hi_occ": 0.0, "k_idle": "bl 50", "label": "20.5", "to": "ME-D3-PAT", "width": 2}, {"color": "green", "from": "ME-D3-CWD", "hi_occ": 0.0, "k_idle": "bl 50", "label": "0.3", "to": "ME-D3-SOR", "width": 2}, {"color": "green", "from": "ME-D3-CWD", "hi_occ": 0.0, "k_idle": "bl 50", "label": "0.1", "to": "ME-D3-TGN", "width": 2}, {"color": "green", "from": "ME-D3-TGN", "hi_occ": 0.0, "k_idle": "bl 50", "label": "15.3", "to": "ME-D3-SGN", "width": 2}, {"color": "green", "from": "ME-D3-DGO", "hi_occ": 0.0, "k_idle": "50 sd 100", "label": "7.2", "to": "ME-D3-HGM", "width": 2}, {"color": "black", "from": "ME-D3-DGO", "hi_occ": 0.0, "k_idle": "bl 50", "label": "0.0", "to": "ME-HRB-JWB-RNC-TSEL", "width": 3}, {"color": "black", "from": "ME-D3-DGO", "hi_occ": 0.0, "k_idle": "bl 50", "label": "0.0", "to": "ME-D3-TSEL-DGO", "width": 3}, {"color": "black", "from": "ME-D3-HGM", "hi_occ": 0.0, "k_idle": "bl 50", "label": "0.0", "to": "ME-HRB-JWB-RNC-TSEL", "width": 3}, {"color": "green", "from": "ME-D3-HGM", "hi_occ": 0.0, "k_idle": "50 sd 100", "label": "25.2", "to": "ME9-D3-LBG", "width": 2}, {"color": "black", "from": "ME-D3-HGM", "hi_occ": 0.0, "k_idle": "bl 50", "label": "0.0", "to": "ME-D3-TSEL-DGO", "width": 3}, {"color": "green", "from": "ME-D3-HAR", "hi_occ": 0.0, "k_idle": "bl 50", "label": "19.9", "to": "ME-D3-PAT", "width": 2}, {"color": "green", "from": "ME-D3-HAR", "hi_occ": 0.0, "k_idle": "bl 50", "label": "0.3", "to": "ME-D3-PGD", "width": 2}, {"color": "green", "from": "ME-D3-PAT", "hi_occ": 0.0, "k_idle": "bl 50", "label": "0.2", "to": "ME-D3-LSR", "width": 2}, {"color": "black", "from": "ME-D3-PAT", "hi_occ": 0.0, "k_idle": "bl 50", "label": "0.0", "to": "ME-D3-SUB", "width": 3}, {"color": "green", "from": "ME-D3-PGD", "hi_occ": 0.0, "k_idle": "bl 50", "label": "13.6", "to": "ME-D3-SUB", "width": 2}, {"color": "green", "from": "ME9-D3-LBG", "hi_occ": 0.0, "k_idle": "bl 50", "label": "65.5", "to": "ME-D3-SMD", "width": 2}, {"color": "green", "from": "ME9-D3-LBG", "hi_occ": 0.0, "k_idle": "bl 50", "label": "26.1", "to": "ME-D3-TGA", "width": 2}, {"color": "green", "from": "ME9-D3-LBG", "hi_occ": 0.0, "k_idle": "100 Up", "label": "85.2", "to": "ME-D3-UBR", "width": 2}, {"color": "green", "from": "ME9-D3-LBG", "hi_occ": 0.0, "k_idle": "50 sd 100", "label": "4.2", "to": "ME2-D3-CCD", "width": 2}, {"color": "green", "from": "ME9-D3-LBG", "hi_occ": 0.0, "k_idle": "50 sd 100", "label": "108.3", "to": "ME3-D3-LBG", "width": 2}, {"color": "green", "from": "ME9-D3-LBG", "hi_occ": 0.0, "k_idle": "bl 50", "label": "2.1", "to": "ME4-D3-LBG", "width": 2}, {"color": "green", "from": "ME9-D3-LBG", "hi_occ": 0.0, "k_idle": "bl 50", "label": "0.0", "to": "ME-B-JWB-JPT", "width": 2}, {"color": "green", "from": "ME9-D3-LBG", "hi_occ": 0.0, "k_idle": "bl 50", "label": "2.2", "to": "ME4-A-JWB-SNT", "width": 2}, {"color": "black", "from": "ME-D3-HRB-NISP", "hi_occ": 0.0, "k_idle": "bl 50", "label": "0.0", "to": "ME-A-JWB-TGG", "width": 3}, {"color": "green", "from": "ME-D3-RGA", "hi_occ": 0.0, "k_idle": "bl 50", "label": "37.2", "to": "ME-D3-KYA", "width": 2}, {"color": "green", "from": "ME-D3-JPT", "hi_occ": 0.0, "k_idle": "bl 50", "label": "0.0", "to": "ME-D3-LBG", "width": 2}, {"color": "green", "from": "ME-D3-JTW", "hi_occ": 0.0, "k_idle": "bl 50", "label": "12.9", "to": "ME-D3-KAD", "width": 2}, {"color": "black", "from": "ME-D3-KAD", "hi_occ": 0.0, "k_idle": "bl 50", "label": "0.0", "to": "ME-A-JWB-SMD", "width": 3}, {"color": "black", "from": "ME-D3-KAD", "hi_occ": 0.0, "k_idle": "bl 50", "label": "0.0", "to": "ME-D3-SUB", "width": 3}, {"color": "black", "from": "ME-D3-KAD", "hi_occ": 0.0, "k_idle": "bl 50", "label": "0.0", "to": "ME-D3-SMD", "width": 3}, {"color": "green", "from": "ME-D3-SUB", "hi_occ": 0.0, "k_idle": "bl 50", "label": "30.7", "to": "ME-D3-KLJ", "width": 2}, {"color": "green", "from": "ME-D3-KCI", "hi_occ": 0.0, "k_idle": "bl 50", "label": "0.6", "to": "ME-B-JWB-LOS", "width": 2}, {"color": "green", "from": "ME-D3-KCI", "hi_occ": 0.0, "k_idle": "bl 50", "label": "7.8", "to": "ME-D3-KYA", "width": 2}, {"color": "green", "from": "ME-D3-KCI", "hi_occ": 0.0, "k_idle": "bl 50", "label": "0.6", "to": "ME-D3-LOS", "width": 2}, {"color": "black", "from": "ME-D3-LBG-RR", "hi_occ": 0.0, "k_idle": "bl 50", "label": "0.0", "to": "ME3-D3-LBG", "width": 3}, {"color": "black", "from": "ME-D3-LBG-RR", "hi_occ": 0.0, "k_idle": "bl 50", "label": "0.0", "to": "ME4-A-JWB-SNT", "width": 3}, {"color": "black", "from": "ME-D3-LBG-RR", "hi_occ": 0.0, "k_idle": "bl 50", "label": "0.0", "to": "ME4-D3-LBG", "width": 3}, {"color": "green", "from": "ME-D3-LOS", "hi_occ": 0.0, "k_idle": "bl 50", "label": "9.7", "to": "ME-D3-PAB", "width": 2}, {"color": "green", "from": "ME-D3-PAB", "hi_occ": 0.0, "k_idle": "bl 50", "label": "34.0", "to": "ME-D3-SDU", "width": 2}, {"color": "green", "from": "ME-D3-TAS", "hi_occ": 0.0, "k_idle": "bl 50", "label": "10.8", "to": "ME-D3-SMD", "width": 2}, {"color": "green", "from": "ME-D3-TTC", "hi_occ": 0.0, "k_idle": "bl 50", "label": "0.0", "to": "ME-B-JKT-TTC", "width": 2}, {"color": "black", "from": "ME2-D3-CCD", "hi_occ": 0.0, "k_idle": "bl 50", "label": "0.0", "to": "ME-D3-CCD-RR-1", "width": 3}, {"color": "black", "from": "ME2-D3-CCD", "hi_occ": 0.0, "k_idle": "bl 50", "label": "0.0", "to": "ME-D3-CCD-RR-2", "width": 3}, {"color": "green", "from": "ME2-D3-TTC", "hi_occ": 0.0, "k_idle": "bl 50", "label": "0.0", "to": "ME-A-JWB-GGK_2", "width": 2}, {"color": "green", "from": "ME2-D3-TTC", "hi_occ": 0.0, "k_idle": "bl 50", "label": "0.0", "to": "TO_7750", "width": 2}, {"color": "green", "from": "ME3-D3-RDC", "hi_occ": 0.0, "k_idle": "bl 50", "label": "1.2", "to": "ME-A-JWB-GGK", "width": 2}, {"color": "black", "from": "ME3-D3-RDC", "hi_occ": 0.0, "k_idle": "bl 50", "label": "0.0", "to": "ME-A-JWB-RDC-LINK2", "width": 3}]);
+
+                  nodeColors = {};
+                  allNodes = nodes.get({ returnType: "Object" });
+                  for (nodeId in allNodes) {
+                    nodeColors[nodeId] = allNodes[nodeId].color;
+                  }
+                  allEdges = edges.get({ returnType: "Object" });
+                  // adding nodes and edges to the graph
+                  data = {nodes: nodes, edges: edges};
+
+                  var options = {
+    "configure": {
+        "enabled": false
+    },
+    "edges": {
+        "color": {
+            "inherit": true
+        },
+        "smooth": {
+            "enabled": true,
+            "type": "dynamic"
+        }
+    },
+    "interaction": {
+        "dragNodes": true,
+        "hideEdgesOnDrag": false,
+        "hideNodesOnDrag": false
+    },
+    "physics": {
+        "enabled": true,
+        "stabilization": {
+            "enabled": true,
+            "fit": true,
+            "iterations": 1000,
+            "onlyDynamicEdges": false,
+            "updateInterval": 50
+        }
+    }
+};
+
+                  
+
+
+                  
+
+                  network = new vis.Network(container, data, options);
+
+                  
+
+                  
+                    network.on("selectNode", neighbourhoodHighlight);
+                  
+
+                  
+
+
+                  
+                      network.on("stabilizationProgress", function(params) {
+                          document.getElementById('loadingBar').removeAttribute("style");
+                          var maxWidth = 496;
+                          var minWidth = 20;
+                          var widthFactor = params.iterations/params.total;
+                          var width = Math.max(minWidth,maxWidth * widthFactor);
+                          document.getElementById('bar').style.width = width + 'px';
+                          document.getElementById('text').innerHTML = Math.round(widthFactor*100) + '%';
+                      });
+                      network.once("stabilizationIterationsDone", function() {
+                          document.getElementById('text').innerHTML = '100%';
+                          document.getElementById('bar').style.width = '496px';
+                          document.getElementById('loadingBar').style.opacity = 0;
+                          // really clean the dom element
+                          setTimeout(function () {document.getElementById('loadingBar').style.display = 'none';}, 500);
+                      });
+                  
+
+                  return network;
+
+              }
+              drawGraph();
+        </script>
+    </body>
+</html>
